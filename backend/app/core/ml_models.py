@@ -16,7 +16,7 @@ def download_from_google_drive(file_id: str, destination: str) -> bool:
         os.makedirs(os.path.dirname(destination), exist_ok=True)
 
         # Use gdown which handles Google Drive's download restrictions
-        gdown.download(url, destination, quiet=False, fuzzy=True)
+        gdown.download(url, destination, quiet=False)
 
         # Verify the file exists and is not empty
         if os.path.exists(destination):
