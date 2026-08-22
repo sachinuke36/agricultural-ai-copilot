@@ -1,14 +1,13 @@
 import os
 import joblib
-import httpx
+import gdown
 from typing import Optional, List
 from .config import settings
 
 
 def download_from_google_drive(file_id: str, destination: str) -> bool:
-    """Download a file from Google Drive using streaming for large files"""
-    # Use confirm=t to bypass virus scan warning for large files
-    url = f"https://drive.google.com/uc?export=download&confirm=t&id={file_id}"
+    """Download a file from Google Drive using gdown"""
+    url = f"https://drive.google.com/uc?id={file_id}"
 
     print(f"Downloading model to {destination}...")
 
@@ -16,28 +15,20 @@ def download_from_google_drive(file_id: str, destination: str) -> bool:
         # Ensure models directory exists
         os.makedirs(os.path.dirname(destination), exist_ok=True)
 
-        # Use streaming for large files
-        with httpx.Client(follow_redirects=True, timeout=600) as client:
-            with client.stream("GET", url) as response:
-                response.raise_for_status()
-                with open(destination, "wb") as f:
-                    for chunk in response.iter_bytes(chunk_size=8192):
-                        f.write(chunk)
+        # Use gdown which handles Google Drive's download restrictions
+        gdown.download(url, destination, quiet=False, fuzzy=True)
 
-        # Verify the file is not an HTML error page
-        file_size = os.path.getsize(destination)
-        print(f"Downloaded {destination} ({file_size} bytes)")
-
-        if file_size < 10000:  # If file is too small, it might be an error page
-            with open(destination, "rb") as f:
-                header = f.read(100)
-                if b"<!DOCTYPE" in header or b"<html" in header:
-                    print("Error: Downloaded file appears to be HTML, not a model file")
-                    os.remove(destination)
-                    return False
-
-        print(f"Successfully downloaded {destination}")
-        return True
+        # Verify the file exists and is not empty
+        if os.path.exists(destination):
+            file_size = os.path.getsize(destination)
+            print(f"Downloaded {destination} ({file_size} bytes)")
+            if file_size > 10000:  # Model files should be much larger
+                return True
+            else:
+                print("Error: Downloaded file is too small")
+                os.remove(destination)
+                return False
+        return False
     except Exception as e:
         print(f"Error downloading from Google Drive: {e}")
         return False
