@@ -1,6 +1,39 @@
+import os
 import joblib
+import httpx
 from typing import Optional, List
 from .config import settings
+
+
+def download_from_google_drive(file_id: str, destination: str) -> bool:
+    """Download a file from Google Drive"""
+    url = f"https://drive.google.com/uc?export=download&id={file_id}"
+
+    print(f"Downloading model to {destination}...")
+
+    try:
+        # First request to get confirmation token for large files
+        with httpx.Client(follow_redirects=True, timeout=300) as client:
+            response = client.get(url)
+
+            # Check if we need to confirm download (large file warning)
+            if b"confirm=" in response.content:
+                # Extract confirm token and retry
+                confirm_url = f"{url}&confirm=t"
+                response = client.get(confirm_url)
+
+            # Ensure models directory exists
+            os.makedirs(os.path.dirname(destination), exist_ok=True)
+
+            with open(destination, "wb") as f:
+                f.write(response.content)
+
+        print(f"Successfully downloaded {destination}")
+        return True
+    except Exception as e:
+        print(f"Error downloading from Google Drive: {e}")
+        return False
+
 
 class MLModels:
     """Singleton class to manage ML model loading and access"""
@@ -20,7 +53,26 @@ class MLModels:
         self.yield_crops: List[str] = []
         self.yield_seasons: List[str] = []
         self.yield_states: List[str] = []
+        self._ensure_models_exist()
         self._load_models()
+
+    def _ensure_models_exist(self):
+        """Download models from Google Drive if they don't exist locally"""
+        # Download crop model if needed
+        if not os.path.exists(settings.CROP_MODEL_PATH):
+            print("Crop model not found locally, downloading from Google Drive...")
+            download_from_google_drive(
+                settings.CROP_MODEL_GDRIVE_ID,
+                settings.CROP_MODEL_PATH
+            )
+
+        # Download yield model if needed
+        if not os.path.exists(settings.YIELD_MODEL_PATH):
+            print("Yield model not found locally, downloading from Google Drive...")
+            download_from_google_drive(
+                settings.YIELD_MODEL_GDRIVE_ID,
+                settings.YIELD_MODEL_PATH
+            )
 
     def _load_models(self):
         """Load ML models and extract metadata"""
