@@ -11,7 +11,10 @@ class Settings:
     GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
 
     # CORS Settings
-    CORS_ORIGINS: list = ["http://localhost:3000"]
+    CORS_ORIGINS: list = [
+        "http://localhost:3000",
+        "https://agricultural-ai-copilot.vercel.app",
+    ]
 
     # Model Paths
     CROP_MODEL_PATH: str = "models/crop_recommendation_model.pkl"
