@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+pydantic
+scikit-learn==1.6.1
+pandas==2.0.3
+numpy
+joblib
+python-dotenv
+httpx
+groq
